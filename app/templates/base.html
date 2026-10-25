@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}{{ title }}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <header class="top-bar">
+        <div>
+            <h1>{{ title }}</h1>
+            {% if subtitle %}<div class="subtitle">{{ subtitle }}</div>{% endif %}
+        </div>
+        <nav class="nav">
+            <a href="{{ url_for('dashboard.home') }}"
+               class="{{ 'active' if request.endpoint == 'dashboard.hive_dashboard' }}">Dashboard</a>
+            <a href="{{ url_for('dashboard.mobile') }}"
+               class="{{ 'active' if request.endpoint == 'dashboard.mobile' }}">Mobile camera</a>
+        </nav>
+    </header>
+
+    {% block content %}{% endblock %}
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

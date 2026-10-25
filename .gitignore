@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Virtual environment
+.venv/
+venv/
+
+# Secrets and local settings
+.env
+pi/.env
+certs/
+*.pem
+*.key
+
+# Database and runtime files
+instance/
+pi/unsent_readings.jsonl*
+*.log
+
+# Large files (copy them separately, not via git)
+models/*.pt
+models/*.onnx
+models/*.tflite
+data/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

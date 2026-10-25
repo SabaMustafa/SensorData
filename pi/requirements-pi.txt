@@ -1,0 +1,13 @@
+# Install on the Raspberry Pi (inside a venv created with --system-site-packages,
+# so the system picamera2 package is available):
+#   python3 -m venv --system-site-packages ~/hive-venv
+#   ~/hive-venv/bin/pip install -r requirements-pi.txt
+requests>=2.28
+opencv-python-headless>=4.8
+
+# Uncomment the sensor libraries you use:
+# adafruit-circuitpython-dht
+# adafruit-circuitpython-bme280
+
+# Pi Camera Module: picamera2 comes with Raspberry Pi OS
+#   (sudo apt install -y python3-picamera2 if missing)

@@ -1,0 +1,21 @@
+# Starts the sensor sender automatically when the Pi boots.
+# Install:
+#   sudo cp hive-sensors.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now hive-sensors
+# Settings are read from /home/pi/hive/pi/.env
+
+[Unit]
+Description=Hive sensor sender
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/hive/pi
+ExecStart=/home/pi/hive-venv/bin/python sensor_sender.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

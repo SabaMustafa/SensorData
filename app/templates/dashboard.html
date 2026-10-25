@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}{{ hive.name }} | {{ title }}{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page">
+
+    <!-- LEFT PANEL -->
+    <div>
+
+        <!-- SENSORS -->
+        <div class="card">
+            <div class="card-header">
+                <span>{{ hive.name }} sensors</span>
+                <span id="sensorBadge" class="badge">Waiting…</span>
+            </div>
+            <div class="card-body">
+                <div class="tiles">
+                    <div class="tile">
+                        <div class="tile-label">Temperature</div>
+                        <div class="tile-value"><span id="temp">--</span><span class="tile-unit"> °C</span></div>
+                    </div>
+                    <div class="tile">
+                        <div class="tile-label">Humidity</div>
+                        <div class="tile-value"><span id="hum">--</span><span class="tile-unit"> %</span></div>
+                    </div>
+                    <div class="tile">
+                        <div class="tile-label">Weight</div>
+                        <div class="tile-value"><span id="weight">--</span><span class="tile-unit"> kg</span></div>
+                    </div>
+                </div>
+                <div id="extraSensors"></div>
+                <div class="muted" style="margin-top:10px">Last reading: <span id="lastReading">never</span></div>
+            </div>
+        </div>
+
+        <!-- QUEEN -->
+        <div class="card">
+            <div class="card-header">
+                <span>Queen detection</span>
+                <span id="queenBadge" class="badge">--</span>
+            </div>
+            <div class="card-body">
+                <ul class="status-list">
+                    <li><span class="label">Status</span><span class="value" id="queenStatus">--</span></li>
+                    <li><span class="label">Confidence</span><span class="value" id="queenConf">--</span></li>
+                    <li><span class="label">Last seen (live camera)</span><span class="value" id="queenLastSeen">never</span></li>
+                    <li><span class="label">Camera source</span><span class="value" id="cameraMode">--</span></li>
+                </ul>
+                <div id="detectionError" class="highlight-box" style="display:none"></div>
+            </div>
+        </div>
+
+        <!-- MODEL -->
+        <div class="card">
+            <div class="card-header">Model information</div>
+            <div class="card-body">
+                <ul class="status-list">
+                    <li><span class="label">Selected model</span><span class="value">{{ model_info.name }}</span></li>
+                    <li><span class="label">Model size</span><span class="value">{{ model_info.size }}</span></li>
+                    <li><span class="label">Parameters</span><span class="value">{{ model_info.parameters }}</span></li>
+                    <li><span class="label">CPU speed</span><span class="value">{{ model_info.cpu_fps }}</span></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div>
+        <div class="card">
+            <div class="card-header">
+                <span>Hive camera</span>
+                <span id="videoBadge" class="badge">--</span>
+            </div>
+            <div class="card-body">
+                {% if has_camera %}
+                    <img class="video-feed"
+                         src="{{ url_for('streaming.video_feed', hive_id=hive.id) }}"
+                         alt="Live hive camera with queen detection">
+                {% else %}
+                    <div class="video-placeholder">
+                        Camera is disabled (CAMERA_ENABLED=false in .env).
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span>Sensor history</span>
+                <span class="chart-controls" id="rangeButtons">
+                    <button data-hours="6">6 h</button>
+                    <button data-hours="24" class="active">24 h</button>
+                    <button data-hours="168">7 days</button>
+                    <button data-hours="720">30 days</button>
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="chart-box">
+                    <canvas id="historyChart"></canvas>
+                    <div id="emptyChart" class="empty-chart" style="display:none">
+                        No sensor readings in this period yet.<br>
+                        Start the Raspberry Pi sensor script (or the simulator) to see data here.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    window.HIVE_ID = {{ hive.id }};
+    window.API_BASE = "/api/v1";
+</script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

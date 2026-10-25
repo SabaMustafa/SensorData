@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Mobile Queen Finder | {{ title }}{% endblock %}
+
+{% block content %}
+<div class="mobile-wrap">
+    <div class="card">
+        <div class="card-header">
+            <span>Queen finder (phone camera)</span>
+            <span id="queenBadge" class="badge">Not started</span>
+        </div>
+        <div class="card-body">
+            <p class="muted" style="margin-top:0">
+                Point your phone camera at a hive frame. Photos are sent to the server,
+                and the queen is marked when the model finds her.
+                Phones only allow camera access over <b>https</b> (or on localhost).
+            </p>
+
+            <div class="cam-box">
+                <video id="cam" autoplay playsinline muted></video>
+                <canvas id="overlay"></canvas>
+                <div class="cam-info">
+                    Queen: <span id="queenStatus">--</span> |
+                    Conf: <span id="queenConf">0.00</span>
+                </div>
+            </div>
+
+            <div style="margin-top:14px">
+                <button id="startBtn" class="btn">Start camera</button>
+            </div>
+            <div id="errorBox" class="highlight-box" style="display:none"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const video = document.getElementById("cam");
+    const canvas = document.getElementById("overlay");
+    const ctx = canvas.getContext("2d");
+    const statusEl = document.getElementById("queenStatus");
+    const confEl = document.getElementById("queenConf");
+    const badge = document.getElementById("queenBadge");
+    const errorBox = document.getElementById("errorBox");
+
+    const CAPTURE_WIDTH = 640;   // small frames = faster detection
+    const SEND_EVERY_MS = 250;   // about 4 frames per second
+    const KEEP_BOX_MS = 1000;    // keep the last box briefly to avoid flicker
+
+    let sending = false;
+    let lastBox = null;
+    let lastSeen = 0;
+
+    function showError(msg) {
+        errorBox.style.display = "block";
+        errorBox.textContent = msg;
+    }
+
+    function resizeOverlay() {
+        const rect = video.getBoundingClientRect();
+        canvas.width = Math.floor(rect.width);
+        canvas.height = Math.floor(rect.height);
+    }
+    window.addEventListener("resize", resizeOverlay);
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (lastBox && Date.now() - lastSeen < KEEP_BOX_MS) {
+            const b = lastBox;
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = "yellow";
+            ctx.strokeRect(b.x1, b.y1, b.x2 - b.x1, b.y2 - b.y1);
+            ctx.font = "18px Arial";
+            ctx.fillStyle = "white";
+            ctx.fillText(`Queen ${b.conf.toFixed(2)}`, b.x1, Math.max(22, b.y1 - 8));
+        }
+        requestAnimationFrame(draw);
+    }
+
+    async function sendFrame() {
+        if (sending || video.readyState < 2) return;
+        sending = true;
+
+        const scale = CAPTURE_WIDTH / video.videoWidth;
+        const capW = CAPTURE_WIDTH;
+        const capH = Math.floor(video.videoHeight * scale);
+        const tmp = document.createElement("canvas");
+        tmp.width = capW;
+        tmp.height = capH;
+        tmp.getContext("2d").drawImage(video, 0, 0, capW, capH);
+
+        try {
+            const res = await fetch("/api/v1/detect", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ image: tmp.toDataURL("image/jpeg", 0.6) }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || res.status);
+
+            statusEl.textContent = data.status;
+            confEl.textContent = (data.conf || 0).toFixed(2);
+            badge.textContent = data.box ? "Queen detected" : "Scanning";
+            badge.className = "badge " + (data.box ? "badge-green" : "badge-blue");
+
+            if (data.box) {
+                // Map the box from capture size to the size shown on screen
+                const rect = video.getBoundingClientRect();
+                const sx = rect.width / capW;
+                const sy = rect.height / capH;
+                lastBox = {
+                    x1: data.box.x1 * sx, y1: data.box.y1 * sy,
+                    x2: data.box.x2 * sx, y2: data.box.y2 * sy,
+                    conf: data.conf,
+                };
+                lastSeen = Date.now();
+            }
+        } catch (e) {
+            showError("Detection failed: " + e.message);
+        }
+        sending = false;
+    }
+
+    document.getElementById("startBtn").addEventListener("click", async (e) => {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            showError("Camera not available. Open this page over https or on localhost.");
+            return;
+        }
+        try {
+            video.srcObject = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: "environment" }, audio: false,
+            });
+        } catch (err) {
+            showError("Could not open the camera: " + err.message);
+            return;
+        }
+        e.target.disabled = true;
+        video.onloadedmetadata = () => {
+            resizeOverlay();
+            requestAnimationFrame(draw);
+            setInterval(sendFrame, SEND_EVERY_MS);
+        };
+    });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,3 @@
+# Files that run on the Raspberry Pi (Linux) must keep Linux line endings
+pi/** text eol=lf
+*.sh text eol=lf

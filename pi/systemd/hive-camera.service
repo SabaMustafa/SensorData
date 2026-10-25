@@ -1,0 +1,22 @@
+# Starts the camera stream automatically when the Pi boots.
+# Install:
+#   sudo cp hive-camera.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now hive-camera
+# Change "pi" (user) and the paths if yours are different.
+# Use "--camera picam" for the Raspberry Pi Camera Module.
+
+[Unit]
+Description=Hive camera MJPEG stream
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/hive/pi
+ExecStart=/home/pi/hive-venv/bin/python camera_stream.py --camera usb --device 0 --port 8000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
