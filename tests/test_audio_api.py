@@ -1,3 +1,4 @@
+import os
 import shutil
 
 import pytest
@@ -57,3 +58,39 @@ def test_recording_rejects_unsafe_names_and_bad_keys(client, auth):
     assert res.status_code == 400
     res = client.put("/api/v1/hives/1/recordings/a.WAV", headers={"X-API-Key": "no"}, data=b"x")
     assert res.status_code == 401
+
+
+def test_recordings_switch_refuses_uploads_when_off(client, auth):
+    assert client.get("/api/v1/hives/1/settings").json["recordings_enabled"] is True
+
+    res = client.put("/api/v1/hives/1/settings", json={"recordings_enabled": False})
+    assert res.status_code == 200 and res.json["recordings_enabled"] is False
+    assert client.get("/api/v1/hives/1/status").json["audio"]["recordings_enabled"] is False
+
+    headers = {**auth, "Content-Type": "audio/wav"}
+    res = client.put("/api/v1/hives/1/recordings/20261025_130000.WAV", headers=headers, data=b"RIFF" * 50)
+    assert res.status_code == 403
+    assert not os.path.exists(os.path.join(TestConfig.AUDIO_DIR, "1", "20261025_130000.WAV"))
+
+    # Analysis results are small and still accepted
+    res = client.post("/api/v1/hives/1/audio-analysis", headers=auth,
+                      json={"filename": "20261025_130000.WAV", "rms_dbfs": -40})
+    assert res.status_code == 201
+
+    client.put("/api/v1/hives/1/settings", json={"recordings_enabled": True})
+    res = client.put("/api/v1/hives/1/recordings/20261025_130000.WAV", headers=headers, data=b"RIFF" * 50)
+    assert res.status_code == 201
+
+
+def test_settings_rejects_bad_values(client):
+    res = client.put("/api/v1/hives/1/settings", json={"recordings_enabled": "no"})
+    assert res.status_code == 400
+
+
+def test_recordings_refused_when_storage_full(app, client, auth):
+    app.config["AUDIO_MAX_STORAGE_GB"] = 300 / 1024 ** 3  # 300 bytes
+    headers = {**auth, "Content-Type": "audio/wav"}
+    assert client.put("/api/v1/hives/1/recordings/a.WAV", headers=headers, data=b"x" * 200).status_code == 201
+    res = client.put("/api/v1/hives/1/recordings/b.WAV", headers=headers, data=b"x" * 200)
+    assert res.status_code == 507
+    assert client.get("/api/v1/hives/1/settings").json["used_bytes"] == 200

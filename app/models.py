@@ -78,6 +78,16 @@ class SensorReading(db.Model):
         }
 
 
+class HiveSettings(db.Model):
+    """Switches changed from the dashboard, one row per hive."""
+    __tablename__ = "hive_settings"
+
+    hive_id = db.Column(db.Integer, db.ForeignKey("hives.id"), primary_key=True)
+    # False: the Pi's WAV uploads are refused (analysis results still arrive)
+    recordings_enabled = db.Column(db.Boolean, nullable=False, default=True)
+    updated_at = db.Column(db.DateTime, nullable=False, default=utcnow, onupdate=utcnow)
+
+
 class AudioRecording(db.Model):
     """One WAV file sent by the Pi. The file is on disk (AUDIO_DIR), not in the database."""
     __tablename__ = "audio_recordings"

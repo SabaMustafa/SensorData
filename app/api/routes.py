@@ -15,6 +15,8 @@ Used by the web dashboard, the Raspberry Pi and, later, the mobile app.
   PUT  /hives/<id>/recordings/<file>   Pi uploads one WAV recording (needs X-API-Key)
   GET  /hives/<id>/recordings          list of recordings
   GET  /hives/<id>/recordings/<file>   download / play one recording
+  GET  /hives/<id>/settings            recordings on/off switch and disk use
+  PUT  /hives/<id>/settings            change the switch (dashboard)
   POST /detect                         queen detection on one uploaded image
 """
 import base64
@@ -25,6 +27,7 @@ from datetime import datetime, timedelta, timezone
 
 import numpy as np
 from flask import Blueprint, current_app, jsonify, request, send_file
+from sqlalchemy import func
 from werkzeug.exceptions import HTTPException
 
 from ..extensions import db
@@ -32,6 +35,7 @@ from ..models import (
     AudioAnalysis,
     AudioRecording,
     Hive,
+    HiveSettings,
     QueenEvent,
     SensorReading,
     iso,
@@ -153,6 +157,7 @@ def hive_status(hive_id):
         },
         "queen": queen,
         "camera": camera_info,
+        "audio": _audio_settings(hive),
     })
 
 
@@ -418,6 +423,58 @@ def audio_analysis_history(hive_id):
     return jsonify({"hive_id": hive.id, "results": [r.to_dict() for r in rows]})
 
 
+def get_settings(hive):
+    settings = db.session.get(HiveSettings, hive.id)
+    if settings is None:
+        settings = HiveSettings(
+            hive_id=hive.id,
+            recordings_enabled=current_app.config["AUDIO_UPLOADS_ENABLED"],
+        )
+        db.session.add(settings)
+        db.session.commit()
+    return settings
+
+
+def _storage_limit_bytes():
+    return int(current_app.config["AUDIO_MAX_STORAGE_GB"] * 1024 ** 3)
+
+
+def _audio_used_bytes():
+    # All hives share the one audio folder, so the limit covers all of them
+    return db.session.query(func.coalesce(func.sum(AudioRecording.size_bytes), 0)).scalar()
+
+
+def _audio_settings(hive):
+    used = _audio_used_bytes()
+    limit = _storage_limit_bytes()
+    return {
+        "recordings_enabled": get_settings(hive).recordings_enabled,
+        "recordings_count": AudioRecording.query.filter_by(hive_id=hive.id).count(),
+        "used_bytes": used,
+        "limit_bytes": limit or None,
+        "storage_full": bool(limit) and used >= limit,
+    }
+
+
+@api_bp.get("/hives/<int:hive_id>/settings")
+def hive_settings(hive_id):
+    """The Pi can check this before sending a recording, to save bandwidth."""
+    return jsonify(_audio_settings(get_hive_or_404(hive_id)))
+
+
+@api_bp.put("/hives/<int:hive_id>/settings")
+def update_hive_settings(hive_id):
+    hive = get_hive_or_404(hive_id)
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict) or not isinstance(payload.get("recordings_enabled"), bool):
+        raise ApiError('Send JSON like {"recordings_enabled": false}')
+
+    settings = get_settings(hive)
+    settings.recordings_enabled = payload["recordings_enabled"]
+    db.session.commit()
+    return jsonify(_audio_settings(hive))
+
+
 @api_bp.put("/hives/<int:hive_id>/recordings/<filename>")
 def put_recording(hive_id, filename):
     """The body is the WAV file itself (Content-Type: audio/wav)."""
@@ -436,6 +493,16 @@ def put_recording(hive_id, filename):
     existing = AudioRecording.query.filter_by(hive_id=hive.id, filename=filename).first()
     if existing and existing.size_bytes == length and os.path.exists(existing.path):
         return jsonify({"status": "exists", "recording": existing.to_dict()}), 200
+
+    # Checked before reading the body, so nothing is written to disk
+    if not get_settings(hive).recordings_enabled:
+        raise ApiError("Receiving recordings is turned off on the dashboard", 403)
+    limit = _storage_limit_bytes()
+    if limit and _audio_used_bytes() + length > limit:
+        raise ApiError(
+            f"Recordings storage is full ({current_app.config['AUDIO_MAX_STORAGE_GB']:g} GB limit)",
+            507,
+        )
 
     folder = os.path.join(current_app.config["AUDIO_DIR"], str(hive.id))
     os.makedirs(folder, exist_ok=True)

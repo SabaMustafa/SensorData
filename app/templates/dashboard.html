@@ -55,6 +55,28 @@
             </div>
         </div>
 
+        <!-- AUDIO RECORDINGS -->
+        <div class="card">
+            <div class="card-header">
+                <span>Audio recordings from the Pi</span>
+                <span id="audioBadge" class="badge">--</span>
+            </div>
+            <div class="card-body">
+                <label class="switch-row">
+                    <span>Receive recordings on this laptop</span>
+                    <input type="checkbox" id="recordingsSwitch" class="switch" disabled>
+                </label>
+                <ul class="status-list">
+                    <li><span class="label">Disk space used</span><span class="value" id="audioUsed">--</span></li>
+                    <li><span class="label">Recordings stored</span><span class="value" id="audioCount">--</span></li>
+                </ul>
+                <div class="muted" style="margin-top:8px">
+                    When off, the Pi's WAV files are refused. Audio analysis results still arrive.
+                </div>
+                <div id="audioError" class="highlight-box" style="display:none"></div>
+            </div>
+        </div>
+
         <!-- MODEL -->
         <div class="card">
             <div class="card-header">Model information</div>

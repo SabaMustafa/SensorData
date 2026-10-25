@@ -76,7 +76,60 @@
         const err = data.camera.detection_error;
         $("detectionError").style.display = err ? "block" : "none";
         $("detectionError").textContent = err ? "Detection error: " + err : "";
+
+        renderAudio(data.audio);
     }
+
+    // ------------------------------------------------------------
+    // Audio recordings switch
+    // ------------------------------------------------------------
+    const settingsUrl = `${API_BASE}/hives/${HIVE_ID}/settings`;
+    let savingSwitch = false;
+
+    function fmtBytes(bytes) {
+        if (bytes >= 1024 ** 3) return (bytes / 1024 ** 3).toFixed(2) + " GB";
+        return (bytes / 1024 ** 2).toFixed(1) + " MB";
+    }
+
+    function renderAudio(audio) {
+        if (!audio) return;
+        const sw = $("recordingsSwitch");
+        if (!savingSwitch) {
+            sw.checked = audio.recordings_enabled;
+            sw.disabled = false;
+        }
+        $("audioUsed").textContent = fmtBytes(audio.used_bytes) +
+            (audio.limit_bytes ? " of " + fmtBytes(audio.limit_bytes) : "");
+        $("audioCount").textContent = audio.recordings_count;
+
+        if (!audio.recordings_enabled) setBadge($("audioBadge"), "Off", "");
+        else if (audio.storage_full) setBadge($("audioBadge"), "Storage full", "red");
+        else setBadge($("audioBadge"), "Receiving", "green");
+    }
+
+    $("recordingsSwitch").addEventListener("change", async (e) => {
+        const sw = e.target;
+        savingSwitch = true;
+        sw.disabled = true;
+        $("audioError").style.display = "none";
+        try {
+            const res = await fetch(settingsUrl, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ recordings_enabled: sw.checked }),
+            });
+            if (!res.ok) throw new Error(res.status);
+            savingSwitch = false;
+            renderAudio(await res.json());
+        } catch (err) {
+            sw.checked = !sw.checked; // put it back: the change was not saved
+            $("audioError").style.display = "block";
+            $("audioError").textContent = "Could not save the switch. Is the server running?";
+        } finally {
+            savingSwitch = false;
+            sw.disabled = false;
+        }
+    });
 
     async function loadStatus() {
         try {

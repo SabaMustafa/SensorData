@@ -81,6 +81,11 @@ class Config:
     # ---------------------------------------------------------
     AUDIO_DIR = os.getenv("AUDIO_DIR", os.path.join(BASE_DIR, "instance", "audio"))
     MAX_AUDIO_MB = int(os.getenv("MAX_AUDIO_MB", "500"))
+    # Starting value of the dashboard's "Receive recordings" switch. After the
+    # first start the switch is saved in the database and this is not used.
+    AUDIO_UPLOADS_ENABLED = _bool("AUDIO_UPLOADS_ENABLED", True)
+    # Recordings are refused once they use this much disk space (0 = no limit)
+    AUDIO_MAX_STORAGE_GB = float(os.getenv("AUDIO_MAX_STORAGE_GB", "5"))
 
     # ---------------------------------------------------------
     # Model information shown on the dashboard
