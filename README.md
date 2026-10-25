@@ -108,6 +108,15 @@ otherwise the Pi cannot reach port 5000.
 | GET  | `/api/v1/hives/1/readings?hours=24` | History for charts |
 | GET  | `/api/v1/hives/1/queen/events?hours=24` | When the queen was seen on the live camera |
 | POST | `/api/v1/detect` | Queen detection on one image (JSON base64 or file upload) |
+| POST | `/api/v1/hives/1/audio-analysis` | bee-node sends audio analysis results (header `X-API-Key`) |
+| GET  | `/api/v1/hives/1/audio-analysis?hours=24` | Audio analysis history |
+| PUT  | `/api/v1/hives/1/recordings/<file>.WAV` | bee-node uploads one WAV recording (header `X-API-Key`) |
+| GET  | `/api/v1/hives/1/recordings?hours=24` | List of recordings |
+| GET  | `/api/v1/hives/1/recordings/<file>.WAV` | Download / play one recording |
+
+Readings already stored for the same hive and `recorded_at` are skipped, so a
+sender that retries after a dropped connection never stores a reading twice.
+Recordings are saved under `instance/audio/<hive id>/` (`AUDIO_DIR` in `.env`).
 
 Reading format (single object, a list, or `{"readings": [...]}`):
 
