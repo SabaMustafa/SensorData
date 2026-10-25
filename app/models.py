@@ -78,6 +78,79 @@ class SensorReading(db.Model):
         }
 
 
+class AudioRecording(db.Model):
+    """One WAV file sent by the Pi. The file is on disk (AUDIO_DIR), not in the database."""
+    __tablename__ = "audio_recordings"
+
+    id = db.Column(db.Integer, primary_key=True)
+    hive_id = db.Column(db.Integer, db.ForeignKey("hives.id"), nullable=False)
+    filename = db.Column(db.String(200), nullable=False)
+    # When the recording started (from the Pi), and when it arrived here
+    recorded_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    received_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    size_bytes = db.Column(db.Integer, nullable=False)
+    path = db.Column(db.String(500), nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint("hive_id", "filename", name="uq_recording_hive_file"),
+        db.Index("ix_recordings_hive_time", "hive_id", "recorded_at"),
+    )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "hive_id": self.hive_id,
+            "filename": self.filename,
+            "recorded_at": iso(self.recorded_at),
+            "received_at": iso(self.received_at),
+            "size_bytes": self.size_bytes,
+        }
+
+
+class AudioAnalysis(db.Model):
+    """Frequency analysis the Pi ran on one recording (one row per recording)."""
+    __tablename__ = "audio_analyses"
+
+    id = db.Column(db.Integer, primary_key=True)
+    hive_id = db.Column(db.Integer, db.ForeignKey("hives.id"), nullable=False)
+    filename = db.Column(db.String(200), nullable=False)
+    recorded_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    analysed_at = db.Column(db.DateTime)
+    sample_rate_hz = db.Column(db.Integer)
+    duration_s = db.Column(db.Float)
+    rms_dbfs = db.Column(db.Float)
+    peak_dbfs = db.Column(db.Float)
+    spl_estimate_db = db.Column(db.Float)
+    calibration_db_offset = db.Column(db.Float)
+    dominant_hz = db.Column(db.Float)
+    band_hz = db.Column(db.String(50))
+    audio_device = db.Column(db.String(200))
+    # Strongest frequencies: [{"hz": 199.9, "db": -51.3}, ...]
+    peaks = db.Column(db.JSON)
+
+    __table_args__ = (
+        db.UniqueConstraint("hive_id", "filename", name="uq_analysis_hive_file"),
+        db.Index("ix_analyses_hive_time", "hive_id", "recorded_at"),
+    )
+
+    def to_dict(self):
+        return {
+            "filename": self.filename,
+            "recorded_at": iso(self.recorded_at),
+            "analysed_at": iso(self.analysed_at),
+            "sample_rate_hz": self.sample_rate_hz,
+            "duration_s": self.duration_s,
+            "rms_dbfs": self.rms_dbfs,
+            "peak_dbfs": self.peak_dbfs,
+            "spl_estimate_db": self.spl_estimate_db,
+            "calibration_db_offset": self.calibration_db_offset,
+            "dominant_hz": self.dominant_hz,
+            "band_hz": self.band_hz,
+            "audio_device": self.audio_device,
+            "peaks": self.peaks or [],
+        }
+
+
 class QueenEvent(db.Model):
     """
     One row each time the queen status changes (e.g. SCANNING -> LOCKED).
