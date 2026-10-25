@@ -75,6 +75,14 @@ class Config:
     SENSOR_OFFLINE_AFTER_SECONDS = int(os.getenv("SENSOR_OFFLINE_AFTER_SECONDS", "180"))
 
     # ---------------------------------------------------------
+    # Audio from the Pi (bee-node)
+    # Recordings are saved as files here, one folder per hive.
+    # A 5-minute 16 kHz recording is about 10 MB.
+    # ---------------------------------------------------------
+    AUDIO_DIR = os.getenv("AUDIO_DIR", os.path.join(BASE_DIR, "instance", "audio"))
+    MAX_AUDIO_MB = int(os.getenv("MAX_AUDIO_MB", "500"))
+
+    # ---------------------------------------------------------
     # Model information shown on the dashboard
     # ---------------------------------------------------------
     MODEL_INFO = {
@@ -94,3 +102,4 @@ class TestConfig(Config):
     CAMERA_ENABLED = False
     DETECTION_ENABLED = False
     DEFAULT_HIVE_API_KEY = "test-key"
+    AUDIO_DIR = os.path.join(BASE_DIR, "instance", "test-audio")

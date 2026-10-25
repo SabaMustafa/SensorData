@@ -10,18 +10,33 @@ Used by the web dashboard, the Raspberry Pi and, later, the mobile app.
   POST /hives/<id>/readings            Pi sends sensor readings (needs X-API-Key)
   GET  /hives/<id>/readings?hours=24   sensor history for charts
   GET  /hives/<id>/queen/events        queen seen / not seen history
+  POST /hives/<id>/audio-analysis      Pi sends audio analysis results (needs X-API-Key)
+  GET  /hives/<id>/audio-analysis      analysis history
+  PUT  /hives/<id>/recordings/<file>   Pi uploads one WAV recording (needs X-API-Key)
+  GET  /hives/<id>/recordings          list of recordings
+  GET  /hives/<id>/recordings/<file>   download / play one recording
   POST /detect                         queen detection on one uploaded image
 """
 import base64
+import os
+import re
 import time
 from datetime import datetime, timedelta, timezone
 
 import numpy as np
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, jsonify, request, send_file
 from werkzeug.exceptions import HTTPException
 
 from ..extensions import db
-from ..models import Hive, QueenEvent, SensorReading, iso, utcnow
+from ..models import (
+    AudioAnalysis,
+    AudioRecording,
+    Hive,
+    QueenEvent,
+    SensorReading,
+    iso,
+    utcnow,
+)
 
 api_bp = Blueprint("api", __name__)
 
@@ -58,6 +73,11 @@ def get_hive_or_404(hive_id):
     if hive is None:
         raise ApiError(f"Hive {hive_id} not found", 404)
     return hive
+
+
+def require_api_key(hive):
+    if not hive.check_api_key(request.headers.get("X-API-Key")):
+        raise ApiError("Missing or invalid API key", 401)
 
 
 def get_camera(hive_id):
@@ -221,12 +241,30 @@ def add_readings(hive_id):
         raise ApiError(f"Too many readings in one request (max {MAX_BATCH})")
 
     readings = [_parse_reading(item) for item in items]
+
+    # The Pi re-sends a batch if it never got our answer (Wi-Fi drop), so a
+    # reading already stored for that hive and time is skipped, not doubled.
+    times = [r.recorded_at for r in readings]
+    seen = {
+        t for (t,) in db.session.query(SensorReading.recorded_at).filter(
+            SensorReading.hive_id == hive.id, SensorReading.recorded_at.in_(times)
+        )
+    }
+    new = []
     for r in readings:
+        if r.recorded_at in seen:
+            continue
+        seen.add(r.recorded_at)
         r.hive_id = hive.id
-    db.session.add_all(readings)
+        new.append(r)
+    db.session.add_all(new)
     db.session.commit()
 
-    return jsonify({"saved": len(readings), "latest": readings[-1].to_dict()}), 201
+    return jsonify({
+        "saved": len(new),
+        "duplicates": len(readings) - len(new),
+        "latest": readings[-1].to_dict(),
+    }), 201
 
 
 def _downsample(rows, max_points):
@@ -286,6 +324,171 @@ def queen_events(hive_id):
         .all()
     )
     return jsonify({"hive_id": hive.id, "events": [e.to_dict() for e in events]})
+
+
+# ---------------------------------------------------------------------
+# Audio from the Pi: analysis results and the recordings themselves
+# ---------------------------------------------------------------------
+ANALYSIS_NUMBERS = (
+    "duration_s", "rms_dbfs", "peak_dbfs", "spl_estimate_db",
+    "calibration_db_offset", "dominant_hz",
+)
+# Recording names like 20261025_125215.WAV; nothing that could leave the folder
+SAFE_WAV_NAME = re.compile(r"^[A-Za-z0-9_.-]{1,200}\.wav$", re.IGNORECASE)
+
+
+def _number(item, key, kind=float):
+    value = item.get(key)
+    if value is None or value == "":
+        return None
+    try:
+        return kind(value)
+    except (TypeError, ValueError):
+        raise ApiError(f"{key} must be a number")
+
+
+@api_bp.post("/hives/<int:hive_id>/audio-analysis")
+def add_audio_analysis(hive_id):
+    hive = get_hive_or_404(hive_id)
+    require_api_key(hive)
+
+    payload = request.get_json(silent=True)
+    if payload is None:
+        raise ApiError("Request body must be JSON")
+    # Accept one result, a list, or {"results": [...]}
+    if isinstance(payload, dict) and "results" in payload:
+        items = payload["results"]
+    elif isinstance(payload, list):
+        items = payload
+    else:
+        items = [payload]
+    if not isinstance(items, list) or not items:
+        raise ApiError("No results provided")
+    if len(items) > MAX_BATCH:
+        raise ApiError(f"Too many results in one request (max {MAX_BATCH})")
+
+    rows = []
+    for item in items:
+        if not isinstance(item, dict) or not item.get("filename"):
+            raise ApiError("Each result must be a JSON object with a filename")
+        row = AudioAnalysis(
+            hive_id=hive.id,
+            filename=str(item["filename"])[:200],
+            recorded_at=_parse_time(item.get("recorded_at")),
+            analysed_at=_parse_time(item.get("analysed_at")) if item.get("analysed_at") else None,
+            sample_rate_hz=_number(item, "sample_rate_hz", int),
+            band_hz=str(item.get("band_hz") or "")[:50],
+            audio_device=str(item.get("audio_device") or "")[:200],
+            peaks=item.get("peaks") if isinstance(item.get("peaks"), list) else [],
+        )
+        for key in ANALYSIS_NUMBERS:
+            setattr(row, key, _number(item, key))
+        rows.append(row)
+
+    # One result per recording: a result sent twice is skipped
+    names = [r.filename for r in rows]
+    seen = {
+        n for (n,) in db.session.query(AudioAnalysis.filename).filter(
+            AudioAnalysis.hive_id == hive.id, AudioAnalysis.filename.in_(names)
+        )
+    }
+    new = []
+    for r in rows:
+        if r.filename not in seen:
+            seen.add(r.filename)
+            new.append(r)
+    db.session.add_all(new)
+    db.session.commit()
+    return jsonify({"saved": len(new), "duplicates": len(rows) - len(new)}), 201
+
+
+@api_bp.get("/hives/<int:hive_id>/audio-analysis")
+def audio_analysis_history(hive_id):
+    hive = get_hive_or_404(hive_id)
+    hours = request.args.get("hours", default=24, type=float)
+    since = utcnow() - timedelta(hours=hours)
+    rows = (
+        AudioAnalysis.query.filter(
+            AudioAnalysis.hive_id == hive.id, AudioAnalysis.recorded_at >= since
+        )
+        .order_by(AudioAnalysis.recorded_at)
+        .limit(5000)
+        .all()
+    )
+    return jsonify({"hive_id": hive.id, "results": [r.to_dict() for r in rows]})
+
+
+@api_bp.put("/hives/<int:hive_id>/recordings/<filename>")
+def put_recording(hive_id, filename):
+    """The body is the WAV file itself (Content-Type: audio/wav)."""
+    hive = get_hive_or_404(hive_id)
+    require_api_key(hive)
+
+    if not SAFE_WAV_NAME.match(filename):
+        raise ApiError("filename must be a plain .wav name, e.g. 20261025_125215.WAV")
+    length = request.content_length
+    if not length:
+        raise ApiError("Empty body: send the WAV bytes with a Content-Length")
+    if length > current_app.config["MAX_AUDIO_MB"] * 1024 * 1024:
+        raise ApiError(f"Recording is larger than {current_app.config['MAX_AUDIO_MB']} MB", 413)
+    recorded_at = _parse_time(request.headers.get("X-Recorded-At"))
+
+    existing = AudioRecording.query.filter_by(hive_id=hive.id, filename=filename).first()
+    if existing and existing.size_bytes == length and os.path.exists(existing.path):
+        return jsonify({"status": "exists", "recording": existing.to_dict()}), 200
+
+    folder = os.path.join(current_app.config["AUDIO_DIR"], str(hive.id))
+    os.makedirs(folder, exist_ok=True)
+    final = os.path.join(folder, filename)
+    partial = final + ".part"
+
+    # Written to .part first, so a dropped connection never leaves half a file
+    written = 0
+    with open(partial, "wb") as f:
+        while True:
+            chunk = request.stream.read(1024 * 1024)
+            if not chunk:
+                break
+            f.write(chunk)
+            written += len(chunk)
+    if written != length:
+        os.remove(partial)
+        raise ApiError(f"Upload incomplete: received {written} of {length} bytes")
+    os.replace(partial, final)
+
+    recording = existing or AudioRecording(hive_id=hive.id, filename=filename)
+    recording.recorded_at = recorded_at
+    recording.received_at = utcnow()
+    recording.size_bytes = written
+    recording.path = final
+    db.session.add(recording)
+    db.session.commit()
+    return jsonify({"status": "saved", "recording": recording.to_dict()}), 201
+
+
+@api_bp.get("/hives/<int:hive_id>/recordings")
+def list_recordings(hive_id):
+    hive = get_hive_or_404(hive_id)
+    hours = request.args.get("hours", default=24, type=float)
+    since = utcnow() - timedelta(hours=hours)
+    rows = (
+        AudioRecording.query.filter(
+            AudioRecording.hive_id == hive.id, AudioRecording.recorded_at >= since
+        )
+        .order_by(AudioRecording.recorded_at.desc())
+        .limit(1000)
+        .all()
+    )
+    return jsonify({"hive_id": hive.id, "recordings": [r.to_dict() for r in rows]})
+
+
+@api_bp.get("/hives/<int:hive_id>/recordings/<filename>")
+def get_recording(hive_id, filename):
+    hive = get_hive_or_404(hive_id)
+    recording = AudioRecording.query.filter_by(hive_id=hive.id, filename=filename).first()
+    if recording is None or not os.path.exists(recording.path):
+        raise ApiError(f"Recording {filename} not found", 404)
+    return send_file(recording.path, mimetype="audio/wav", conditional=True)
 
 
 # ---------------------------------------------------------------------
