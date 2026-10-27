@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BeeHive Monitoring | Saba Mustafa, AUT</title>
+    <meta name="description" content="AI that hears colony stress and finds the queen bee in real time. Research by Saba Mustafa and colleagues at Auckland University of Technology.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
+</head>
+<body>
+{%- macro img(name) -%}{{ url_for('static', filename='img/home/' ~ name) }}{%- endmacro -%}
+
+<!-- NAVIGATION -->
+<header class="nav" id="nav">
+    <a class="brand" href="#top">
+        <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l8.66 5v10L12 22l-8.66-5V7z"/></svg>
+        <span>BeeHive Monitoring</span>
+    </a>
+    <nav class="nav-links" aria-label="Sections">
+        <a href="#why">Why it matters</a>
+        <a href="#research">Research</a>
+        <a href="#publications">Publications</a>
+        <a href="#prototype">Prototype</a>
+        <a href="#team">Team</a>
+        <a class="btn btn-small" href="{{ url_for('dashboard.dashboard') }}">Live dashboard</a>
+    </nav>
+</header>
+
+<!-- HERO -->
+<section class="hero" id="top" style="background-image: url('{{ img('hero-apiary.jpg') }}')">
+    <div class="hero-shade"></div>
+    <div class="hero-inner">
+        <p class="eyebrow">Auckland University of Technology · School of Engineering, Computing and Mathematical Sciences</p>
+        <h1>Listening to bees.<br>Seeing the queen.</h1>
+        <p class="lead">We build AI that hears colony stress and finds the queen bee in real time. Ordinary microphones and cameras become continuous, non-invasive hive monitors.</p>
+        <div class="hero-actions">
+            <a class="btn" href="#research">Explore the research</a>
+            <a class="btn btn-ghost" href="{{ url_for('dashboard.dashboard') }}">Open the live dashboard</a>
+        </div>
+    </div>
+    <dl class="hero-stats">
+        <div><dt>99%</dt><dd>accuracy classifying hive states from sound</dd></div>
+        <div><dt>94.7%</dt><dd>of unlabelled recordings pseudo-labelled</dd></div>
+        <div><dt>0.805</dt><dd>mAP@.5:.95 for queen detection on CPU</dd></div>
+        <div><dt>180</dt><dd>studies synthesised from 7,511 records</dd></div>
+    </dl>
+</section>
+
+<!-- WHY IT MATTERS -->
+<section class="section" id="why">
+    <div class="split">
+        <div>
+            <p class="kicker">Why it matters</p>
+            <h2>Hive inspection is still done by hand</h2>
+            <p>Bees pollinate about 75% of the world's leading food crops. Colony losses from Varroa, disease and climate stress are rising. Yet beekeepers still check colony health by opening the hive, frame by frame.</p>
+            <p>That is slow, it disturbs the colony, and it does not scale to hundreds of hives.</p>
+            <blockquote class="question">
+                Can continuous, non-invasive AI sensing reduce manual inspection and detect colony stress earlier?
+            </blockquote>
+            <dl class="mini-stats">
+                <div><dt>505,720</dt><dd>managed colonies in New Zealand</dd></div>
+                <div><dt>7,874</dt><dd>registered NZ beekeepers</dd></div>
+                <div><dt>7–10 days</dt><dd>between inspections in spring</dd></div>
+            </dl>
+            <p class="source">NZ figures: NZ Bee Health &amp; Biosecurity annual report 2024/25; inspection interval: Ecrotek.</p>
+        </div>
+        <figure class="photo-stack">
+            <img src="{{ img('field-frame.jpg') }}" alt="A beekeeper lifts a frame covered in bees out of a hive during an inspection" loading="lazy">
+            <figcaption>A manual inspection: one queen hides among thousands of workers.</figcaption>
+        </figure>
+    </div>
+</section>
+
+<!-- JOURNEY -->
+<section class="section section-tint" id="journey">
+    <p class="kicker">Our journey</p>
+    <h2>From one summer question to a research programme</h2>
+    <ol class="timeline">
+        <li>
+            <span class="year">2024</span>
+            <h3>Origins</h3>
+            <p>An AUT Summer Scholarship asks one question: can we hear stress in a hive?</p>
+        </li>
+        <li>
+            <span class="year">2025</span>
+            <h3>Published</h3>
+            <p>A Transformer model for hive sound is published in <em>IEEE Access</em>, reaching 99% accuracy. A systematic review is released as a preprint.</p>
+        </li>
+        <li class="now">
+            <span class="year">2026</span>
+            <h3>Expanding</h3>
+            <p>A computer-vision paper is accepted at ICONIP 2026, a graduate review article appears in <em>Rangahau Aranga</em>, and the hive monitoring prototype is disclosed to AUT Ventures.</p>
+        </li>
+    </ol>
+    <p class="arc">Colony health <span>→</span> precision beekeeping tools <span>→</span> ecosystem-scale sensing</p>
+</section>
+
+<!-- RESEARCH -->
+<section class="section" id="research">
+    <p class="kicker">Research</p>
+    <h2>Three methods, one direction</h2>
+
+    <article class="feature">
+        <div class="feature-media">
+            <img src="{{ img('paper1-architecture.png') }}" alt="Architecture of the Transformer-based bee behaviour classifier: audio features, encoder, positional encoding, Transformer and classifier" loading="lazy" class="on-white">
+            <div class="fig-pair">
+                <img src="{{ img('paper1-workflow.png') }}" alt="Workflow of the Transformer encoder-classifier: feature extraction, model training, pseudo-labelling and validation" loading="lazy" class="on-white">
+                <img src="{{ img('paper1-tsne.jpg') }}" alt="t-SNE plot of latent features separating Normal, NoQueen and Swarm hive sounds into clusters" loading="lazy" class="on-white">
+            </div>
+            <span class="media-note">From the paper: model architecture, research workflow, and how the model separates hive states.</span>
+        </div>
+        <div class="feature-text">
+            <span class="tag tag-green">Published · IEEE Access 2025</span>
+            <h3><span class="num">01</span> Audio AI: hearing hive stress</h3>
+            <p>Hive sound is noisy and almost never labelled. Our semi-supervised Transformer learns from both labelled and unlabelled recordings. It classifies the colony as <strong>Normal</strong>, <strong>NoQueen</strong> or <strong>Swarm</strong>, and flags stress.</p>
+            <dl class="metrics">
+                <div><dt>99%</dt><dd>accuracy on labelled data</dd></div>
+                <div><dt>94.7%</dt><dd>unlabelled clips pseudo-labelled</dd></div>
+                <div><dt>5,336</dt><dd>audio clips</dd></div>
+            </dl>
+            <p class="small">Features: MFCCs with delta and delta-delta, RMS energy, spectral centroid and dominant frequency (STFT).</p>
+            <a class="link" href="https://doi.org/10.1109/ACCESS.2025.3599330" target="_blank" rel="noopener">Read the paper (DOI 10.1109/ACCESS.2025.3599330) →</a>
+        </div>
+    </article>
+
+    <article class="feature reverse">
+        <div class="feature-media">
+            <img src="{{ img('queen-detection.jpg') }}" alt="Hive frame with thousands of bees; the model draws a box around the queen with confidence 0.93" loading="lazy">
+            <span class="media-note">Our YOLOv8n model finds the queen (confidence 0.93) on a laptop CPU.</span>
+        </div>
+        <div class="feature-text">
+            <span class="tag tag-amber">Accepted · ICONIP 2026</span>
+            <h3><span class="num">02</span> Computer vision: seeing the queen</h3>
+            <p>One queen among tens of thousands of near-identical workers is a rare-target problem, with a class imbalance of about <strong>10,000 to 1</strong>. A data-centric pipeline makes a tiny detector work.</p>
+            <ul class="ticks">
+                <li><strong>Leakage-aware splits:</strong> training and validation frames never share a source video.</li>
+                <li><strong>Queen copy-paste augmentation</strong> adds synthetic queens for the rare class.</li>
+                <li><strong>No GPU needed:</strong> real-time on an ordinary laptop CPU.</li>
+            </ul>
+            <dl class="metrics">
+                <div><dt>0.805</dt><dd>mAP@.5:.95 (YOLOv8n)</dd></div>
+                <div><dt>~43 FPS</dt><dd>on a laptop CPU</dd></div>
+                <div><dt>6 MB</dt><dd>model size</dd></div>
+            </dl>
+            <a class="link" href="#prototype">See it running in our prototype →</a>
+        </div>
+    </article>
+
+    <article class="feature">
+        <div class="feature-media">
+            <img src="{{ img('paper3-taxonomy.png') }}" alt="Hexagon taxonomy of wildfire-detection domains: satellite, UAV, IoT, local systems, and bee-based sensing as a proposed fifth domain" loading="lazy" class="on-white">
+        </div>
+        <div class="feature-text">
+            <span class="tag tag-blue">Preprint 2025 · journal version under review</span>
+            <h3><span class="num">03</span> From colony to ecosystem</h3>
+            <p>A PRISMA systematic review of AI-based wildfire sensing across satellite, UAV, IoT and local systems. Wildfire risk models and bee behaviour respond to the same drivers: heat, humidity, drought and smoke.</p>
+            <p>We propose bee bioacoustics as a possible fifth, complementary sensing domain for future early-warning systems.</p>
+            <dl class="metrics">
+                <div><dt>7,511</dt><dd>records screened</dd></div>
+                <div><dt>180</dt><dd>studies synthesised</dd></div>
+                <div><dt>4 + 1</dt><dd>sensing domains</dd></div>
+            </dl>
+            <a class="link" href="https://doi.org/10.20944/preprints202509.1324.v1" target="_blank" rel="noopener">Read the preprint →</a>
+        </div>
+    </article>
+</section>
+
+<!-- PUBLICATIONS -->
+<section class="section section-dark" id="publications">
+    <p class="kicker">Publications</p>
+    <h2>Peer-reviewed and accepted work</h2>
+    <ol class="pubs">
+        <li>
+            <span class="tag tag-green">Journal · Published</span>
+            <p class="cite"><strong>S. Mustafa, M. Mohaghegh, I. Ardekani and A. Sarrafzadeh</strong>, “Leveraging Machine Learning Approaches to Decode Hive Sounds for Stress Prediction,” <em>IEEE Access</em>, vol. 13, pp. 147953–147971, 2025.</p>
+            <a href="https://doi.org/10.1109/ACCESS.2025.3599330" target="_blank" rel="noopener">doi:10.1109/ACCESS.2025.3599330</a>
+        </li>
+        <li>
+            <span class="tag tag-amber">Conference · Accepted</span>
+            <p class="cite"><strong>S. Mustafa, M. Mohaghegh, I. Ardekani and A. Sarrafzadeh</strong>, “Real-Time Rare-Target Detection in Dense Hive Imagery Using Lightweight YOLOv8n,” accepted at the <em>International Conference on Neural Information Processing (ICONIP)</em>, 2026.</p>
+            <span class="muted">Link available after publication</span>
+        </li>
+        <li>
+            <span class="tag tag-green">Journal article · Published</span>
+            <p class="cite"><strong>S. Mustafa</strong>, “When Bees Speak: Acoustic Monitoring for Colony Health Using Deep Learning,” <em>Rangahau Aranga: AUT Graduate Review</em>, vol. 5, no. 1, 2026.</p>
+            <a href="https://doi.org/10.24135/rangahau-aranga.v5i1.317" target="_blank" rel="noopener">doi:10.24135/rangahau-aranga.v5i1.317</a>
+        </li>
+        <li>
+            <span class="tag tag-blue">Preprint · Published</span>
+            <p class="cite"><strong>S. Mustafa, M. Mohaghegh, I. Ardekani and A. Sarrafzadeh</strong>, “Systematic Literature Review on Merging AI-Based Wildfire Detection with Bee Bioacoustics: A Hybrid Environmental Sensing Approach,” <em>Preprints</em>, 2025.</p>
+            <a href="https://doi.org/10.20944/preprints202509.1324.v1" target="_blank" rel="noopener">doi:10.20944/preprints202509.1324.v1</a>
+        </li>
+    </ol>
+</section>
+
+<!-- PROTOTYPE -->
+<section class="section" id="prototype">
+    <p class="kicker">From paper to prototype</p>
+    <h2>Our prototype, running today</h2>
+    <p class="intro">The research runs as a working system: a web dashboard on a laptop and a phone camera page, fed by a Raspberry Pi beside the hive.</p>
+
+    <div class="proto">
+        <figure class="proto-main">
+            <img src="{{ img('proto-dashboard.jpg') }}" alt="Prototype dashboard showing the live hive video with the detected queen boxed in yellow" loading="lazy">
+            <figcaption>Web dashboard: live video, queen status and model information.</figcaption>
+        </figure>
+        <figure class="phone">
+            <video src="{{ img('field-mobile.mp4') }}" poster="{{ img('field-mobile-poster.jpg') }}" autoplay muted loop playsinline aria-label="Phone camera filming a hive frame in the field"></video>
+            <figcaption>In the field: the phone camera over a live frame.</figcaption>
+        </figure>
+    </div>
+
+    <div class="live" id="live" hidden>
+        <span class="pulse" aria-hidden="true"></span>
+        <strong>Live from the hive</strong>
+        <span id="liveTemp"></span>
+        <span id="liveHum"></span>
+        <span id="liveExtra"></span>
+        <span class="muted" id="liveAgo"></span>
+    </div>
+
+    <div class="pillars">
+        <div><h3>Vision</h3><p>Queen detection on the live camera with YOLOv8n, on CPU only.</p></div>
+        <div><h3>Acoustics</h3><p>AudioMoth recordings, analysed on the Pi for dominant frequency and level.</p></div>
+        <div><h3>Environment</h3><p>Temperature, humidity and pressure from the hive, sent over an encrypted Tailscale link.</p></div>
+    </div>
+
+    <div class="trl">
+        <div class="trl-head">
+            <h3>Technology readiness</h3>
+            <p>Invention disclosure filed with AUT Ventures in June 2026. The Initial Assessment rated the prototype at TRL 3; field validation with beekeepers is the next step.</p>
+        </div>
+        <ol class="trl-bar" aria-label="Technology readiness level 3 of 9">
+            <li class="done">1<span>Principle</span></li>
+            <li class="done">2<span>Concept</span></li>
+            <li class="here">3<span>Proof of concept</span></li>
+            <li>4<span>Lab test</span></li>
+            <li>5<span>Field test</span></li>
+            <li>6<span>Demo</span></li>
+            <li>7<span>Prototype</span></li>
+            <li>8<span>Proven</span></li>
+            <li>9<span>Production</span></li>
+        </ol>
+    </div>
+</section>
+
+<!-- FIELD GALLERY -->
+<section class="section section-tint" id="field">
+    <p class="kicker">In the field</p>
+    <h2>Research that starts at the hive</h2>
+    <div class="gallery">
+        <img class="g-wide" src="{{ img('field-inspection.jpg') }}" alt="A beekeeper in a white suit holds up a frame of honeycomb in an apiary" loading="lazy">
+        <img src="{{ img('field-team.jpg') }}" alt="Two people in bee suits inspect hives among trees" loading="lazy">
+        <img src="{{ img('field-hives.jpg') }}" alt="A beekeeper stands among white hives in a green apiary" loading="lazy">
+        <img class="g-wide" src="{{ img('field-apiary.jpg') }}" alt="A row of white hive boxes in a sunny clearing" loading="lazy">
+    </div>
+</section>
+
+<!-- TEAM -->
+<section class="section" id="team">
+    <p class="kicker">Team</p>
+    <h2>The people behind the work</h2>
+    <div class="team">
+        <div class="person">
+            <img src="{{ img('team-saba.jpg') }}" alt="Portrait of Saba Mustafa" loading="lazy">
+            <h3>Saba Mustafa</h3>
+            <p>PhD Researcher, School of Engineering, Computing and Mathematical Sciences, AUT</p>
+        </div>
+        <div class="person">
+            <img src="{{ img('team-mahsa.jpg') }}" alt="Portrait of Mahsa Mohaghegh" loading="lazy">
+            <h3>Assoc. Prof. Mahsa Mohaghegh</h3>
+            <p>Head of Department, Computer &amp; Information Sciences, AUT</p>
+        </div>
+        <div class="person">
+            <img src="{{ img('team-iman.jpg') }}" alt="Portrait of Iman Ardekani" loading="lazy">
+            <h3>Iman Ardekani</h3>
+            <p>The University of Notre Dame Australia</p>
+        </div>
+        <div class="person">
+            <img src="{{ img('team-abdolhossein.jpg') }}" alt="Portrait of Abdolhossein Sarrafzadeh" loading="lazy">
+            <h3>Abdolhossein Sarrafzadeh</h3>
+            <p>Batten College of Engineering and Technology, Old Dominion University, USA</p>
+        </div>
+    </div>
+</section>
+
+<!-- VISION -->
+<section class="section section-dark vision">
+    <p class="kicker">What comes next</p>
+    <h2>One platform, from a single hive to the landscape</h2>
+    <p class="intro">We are combining vision, acoustics and environmental sensing in one multimodal dashboard, as a field test bed for bees as environmental sentinels.</p>
+    <div class="next">
+        <div><h3>Field partnerships</h3><p>Beekeepers and apiaries, MPI and DOC, fire and emergency services.</p></div>
+        <div><h3>Collaboration</h3><p>Ecologists, entomologists and environmental scientists.</p></div>
+        <div><h3>Impact</h3><p>Biodiversity, food security and climate action, in line with the UN SDGs.</p></div>
+    </div>
+</section>
+
+<footer class="footer">
+    <div>
+        <strong>BeeHive Monitoring</strong>
+        <p>Contact: <a href="mailto:saba.mustafa@autuni.ac.nz">saba.mustafa@autuni.ac.nz</a></p>
+    </div>
+    <div class="support">
+        <p class="muted">Parts of this work are supported by</p>
+        <ul class="support-list">
+            <li>AUT Ventures</li>
+            <li>AUT Summer Scholarship</li>
+            <li>ECMS summer development funding</li>
+        </ul>
+        <p class="muted">Ngā mihi nui.</p>
+    </div>
+</footer>
+
+<script>
+    window.HIVE_STATUS_URL = "{{ url_for('api.hive_status', hive_id=hive.id) if hive else '' }}";
+</script>
+<script src="{{ url_for('static', filename='js/home.js') }}"></script>
+</body>
+</html>

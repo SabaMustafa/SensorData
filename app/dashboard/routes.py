@@ -8,6 +8,13 @@ dashboard_bp = Blueprint("dashboard", __name__)
 
 @dashboard_bp.route("/")
 def home():
+    # Landing page: who we are, the research and the publications
+    hive = Hive.query.order_by(Hive.id).first()
+    return render_template("home.html", hive=hive, title=current_app.config["DASHBOARD_TITLE"])
+
+
+@dashboard_bp.route("/dashboard")
+def dashboard():
     # One hive for now: go straight to its dashboard
     hive = Hive.query.order_by(Hive.id).first()
     return redirect(url_for("dashboard.hive_dashboard", hive_id=hive.id))

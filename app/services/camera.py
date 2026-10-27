@@ -242,7 +242,7 @@ class HiveCamera(threading.Thread):
     @staticmethod
     def _draw_overlay(frame, bbox, status, conf, live):
         label = "LIVE hive camera" if live else "DEMO video (live camera offline)"
-        cv2.putText(frame, f"Queen Bee Watch | {label}", (15, 35),
+        cv2.putText(frame, f"BeeHive Monitoring | {label}", (15, 35),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
 
         if bbox is not None:

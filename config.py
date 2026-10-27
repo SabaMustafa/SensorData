@@ -97,7 +97,7 @@ class Config:
         "cpu_fps": "34.70 FPS",
     }
 
-    DASHBOARD_TITLE = "Queen Bee Watch"
+    DASHBOARD_TITLE = "BeeHive Monitoring"
     DASHBOARD_SUBTITLE = "Live hive camera, queen detection and sensor monitoring"
 
 

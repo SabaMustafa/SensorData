@@ -14,7 +14,8 @@
             {% if subtitle %}<div class="subtitle">{{ subtitle }}</div>{% endif %}
         </div>
         <nav class="nav">
-            <a href="{{ url_for('dashboard.home') }}"
+            <a href="{{ url_for('dashboard.home') }}">Home</a>
+            <a href="{{ url_for('dashboard.dashboard') }}"
                class="{{ 'active' if request.endpoint == 'dashboard.hive_dashboard' }}">Dashboard</a>
             <a href="{{ url_for('dashboard.mobile') }}"
                class="{{ 'active' if request.endpoint == 'dashboard.mobile' }}">Mobile camera</a>

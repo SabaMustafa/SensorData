@@ -93,6 +93,7 @@ def test_detect_disabled_in_tests(client):
 
 def test_dashboard_pages(client):
     res = client.get("/")
-    assert res.status_code == 302
+    assert res.status_code == 200 and b"Publications" in res.data
+    assert client.get("/dashboard").status_code == 302
     assert client.get("/hives/1").status_code == 200
     assert client.get("/mobile").status_code == 200
